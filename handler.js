@@ -1,6 +1,6 @@
 'use strict';
 
-const { promises: {readFile} }= require('fs') // elimina o callback
+const { get } = require('axios');
 
 class Handler {
 
@@ -51,12 +51,23 @@ class Handler {
     return finalText.join('\n')
   }
 
+  async getImageBuffer(imageUrl) {
+    const response = await get(imageUrl, {
+      responseType: 'arraybuffer'
+    })
+    const buffer = Buffer.from(response.data, 'base64')
+    return buffer
+  }
+
   async main(event) {
     try {
-      const imgBuffer = await readFile('./images/download.jpeg')
-      
+      const { imageUrl } = event.queryStringParameters
+      //const imgBuffer = await readFile('./images/download.jpeg')
+      console.log('Download image...')
+      const buffer = await this.getImageBuffer(imageUrl)
+
       console.log('Detecting labels...')
-      const { names, workingItems } = await this.detectImagesLabels(imgBuffer)
+      const { names, workingItems } = await this.detectImagesLabels(buffer)
       
       console.log('Translating to Portuguese...')
       const texts = await this.translateText(names)
