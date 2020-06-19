@@ -4,8 +4,9 @@ const { promises: {readFile} }= require('fs') // elimina o callback
 
 class Handler {
 
-  constructor({rekoSvc}) {
+  constructor({rekoSvc, translatorSvc}) {
     this.rekoSvc = rekoSvc
+    this.translatorSvc = translatorSvc
   }
 
   async detectImagesLabels(buffer) {
@@ -25,11 +26,29 @@ class Handler {
     return { names, workingItems }
   }
 
+  async translateText(text) {
+    const params = {
+      SourceLanguageCode: 'en',
+      TargetLanguageCode: 'pt',
+      Text: text
+    }
+    const result = await this.translatorSvc
+                            .translateText(params)
+                            .promise()
+    console.log(JSON.stringify(result))
+  }
+
   async main(event) {
     try {
       const imgBuffer = await readFile('./images/download.jpeg')
+      
+      console.log('Detecting labels...')
       const { names, workingItems } = await this.detectImagesLabels(imgBuffer)
-      console.log(names, workingItems)
+      
+      console.log('Translating to Portuguese...')
+      const texts = await this.translateText(names)
+
+      console.log('handling final object...')
       return {
         statusCode: 200,
         body: 'Hello!'
@@ -47,10 +66,12 @@ class Handler {
 
 const aws = require('aws-sdk')
 const reko = new aws.Rekognition()
+const translator = new aws.Translate()
 
 //factory
 const handler = new Handler({
-  rekoSvc : reko
+  rekoSvc : reko,
+  translatorSvc: translator
 })
 
 module.exports.main = handler.main.bind(handler)
